@@ -272,7 +272,25 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("PUT /api/config/roots", s.handleUpdateRoots)
 	mux.HandleFunc("GET /index.json", s.handleIndexJSON)
 
-	return s.auth(mux)
+	return s.cors(s.auth(mux))
+}
+
+// cors 允许跨域与私有网络访问。
+// 扩展在 B 站页面（公网 https）中把 <video> 源直接指向本服务（通常为内网地址）时，
+// Chrome 私有网络访问（PNA）会先发送 OPTIONS 预检，要求响应携带
+// Access-Control-Allow-Private-Network 头，否则请求会被拦截。
+func (s *Server) cors(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Private-Network", "true")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, Range")
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 // auth 校验 Bearer token。
