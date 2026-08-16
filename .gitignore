@@ -1,0 +1,15 @@
+.gotool/
+data/
+torrents/
+downloads/
+testdata/data/
+testdata/torrents/
+testdata/media/
+testdata/hdr-e2e/
+*.torrent
+config.yaml
+bili-torrent.exe
+bili-torrent
+deploy/bili-torrent-linux-amd64
+deploy/hdrprobe-*
+deploy/hdrprobe-linux.tar.gz

@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>bili-torrent · B站视频种子管理</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">BT</div>
+      <div>
+        <h1>bili-torrent</h1>
+        <p class="subtitle">B站视频 · 种子管理</p>
+      </div>
+    </div>
+    <nav class="tabs" id="tabs">
+      <button class="tab active" data-view="videos" id="tab-videos">视频 <span class="count" id="count-videos">0</span></button>
+      <button class="tab" data-view="torrents" id="tab-torrents">种子 <span class="count" id="count-torrents">0</span></button>
+      <button class="tab" data-view="indexes" id="tab-indexes">索引 <span class="count" id="count-indexes">0</span></button>
+      <button class="tab" data-view="settings" id="tab-settings">设置</button>
+    </nav>
+    <div class="actions">
+      <button class="btn" id="btn-rescan" title="重新扫描下载目录">重新扫描</button>
+    </div>
+  </header>
+
+  <!-- 视频视图 -->
+  <main class="view" id="view-videos">
+    <section class="toolbar">
+      <div class="status-filter" id="status-filter">
+        <button class="chip active" data-status="">全部 <span id="st-total">0</span></button>
+        <button class="chip" data-status="unmade">未制作 <span id="st-unmade">0</span></button>
+        <button class="chip" data-status="made">已制作 <span id="st-made">0</span></button>
+        <span class="filter-divider"></span>
+        <div class="type-chips" id="type-chips" title="按视频类型筛选（可与上方状态组合）"></div>
+      </div>
+      <div class="toolbar-right">
+        <select id="filter-source" class="select" title="按来源筛选">
+          <option value="">全部来源</option>
+        </select>
+        <input id="search" class="search" type="search" placeholder="搜索标题 / bvid..." />
+      </div>
+    </section>
+
+    <section class="card-grid" id="card-grid"></section>
+    <div class="empty" id="videos-empty" hidden>没有找到视频，点击右上角「重新扫描」。</div>
+
+    <!-- 批量操作条 -->
+    <div class="batch-bar" id="batch-bar" hidden>
+      <label class="batch-info">
+        <input type="checkbox" id="select-all" /> 全选
+        <span id="batch-count">已选 0</span>
+      </label>
+      <button class="btn primary" id="btn-batch-create" disabled>制作种子</button>
+    </div>
+  </main>
+
+  <!-- 种子视图 -->
+  <main class="view" id="view-torrents" hidden>
+    <section class="panel">
+      <h2>已生成的种子</h2>
+      <table class="table" id="torrent-table">
+        <thead>
+          <tr>
+            <th>名称</th><th>InfoHash</th><th>大小</th><th>文件</th><th>索引</th><th>创建时间</th><th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="torrent-tbody"></tbody>
+      </table>
+      <div class="empty" id="torrents-empty" hidden>还没有制作任何种子。切到「视频」页选择视频制作种子。</div>
+    </section>
+  </main>
+
+  <!-- 索引视图 -->
+  <main class="view" id="view-indexes" hidden>
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Bilibili 唯一索引</h2>
+        <div class="actions">
+          <button class="btn" id="btn-copy-index">复制 /index.json</button>
+          <a class="btn" href="/index.json" target="_blank">查看 /index.json</a>
+        </div>
+      </div>
+      <p class="hint">每个索引以 bvid 为唯一标识，包含 B 站原链接与种子内文件路径，其它应用可通过 bvid 关联到同一个视频。</p>
+      <div class="index-list" id="index-list"></div>
+      <div class="empty" id="indexes-empty" hidden>暂无索引，制作种子后会自动生成。</div>
+    </section>
+  </main>
+
+  <!-- 设置视图 -->
+  <main class="view" id="view-settings" hidden>
+    <section class="panel">
+      <h2>扫描文件夹</h2>
+      <p class="hint">设置需要扫描的下载目录（绝对路径）。保存后立即生效并自动重新扫描。</p>
+      <div class="roots-editor">
+        <div class="roots-list" id="roots-list"></div>
+        <div class="roots-add">
+          <input id="root-input" class="search" type="text" placeholder="如 /downloads 或 /opt/bili-torrent/downloads" />
+          <button class="btn primary" id="btn-add-root">添加</button>
+        </div>
+      </div>
+    </section>
+    <section class="panel panel-gap">
+      <h2>其它配置（只读）</h2>
+      <div class="kv" id="other-config"></div>
+    </section>
+  </main>
+
+  <!-- 任务状态条 -->
+  <div class="task-bar" id="task-bar" hidden></div>
+
+  <!-- 后台扫描进度条 -->
+  <div class="task-bar scan-bar" id="scan-bar" hidden></div>
+
+  <!-- 索引详情弹窗 -->
+  <div class="modal-mask" id="modal-mask" hidden>
+    <div class="modal">
+      <div class="modal-head">
+        <h3 id="modal-title">索引</h3>
+        <button class="btn icon" id="modal-close">✕</button>
+      </div>
+      <pre class="modal-body" id="modal-body"></pre>
+    </div>
+  </div>
+
+  <div class="toast-wrap" id="toast-wrap"></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

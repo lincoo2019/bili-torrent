@@ -1,0 +1,23 @@
+# 服务器运行时镜像：直接拷贝本地交叉编译好的静态二进制。
+# hdrprobe 用于从码流快速检测杜比视界/HDR 等视频类型。
+# 如需 ffprobe 音频探测（杜比全景声等），取消下行注释并重新构建：
+#   RUN apk add --no-cache ffmpeg
+FROM alpine:3.21
+
+RUN apk add --no-cache ca-certificates tzdata
+
+WORKDIR /app
+
+COPY bili-torrent-linux-amd64 /usr/local/bin/bili-torrent
+COPY hdrprobe-1.0.0-linux-x64-static /usr/local/bin/hdrprobe
+RUN chmod +x /usr/local/bin/hdrprobe
+
+ENV TZ=Asia/Shanghai \
+    BILI_TORRENT_CONFIG=/data/config/config.yaml
+
+# 只映射 /data；config/data/downloads/torrents 子文件夹由应用启动时自动创建，已存在则复用
+VOLUME ["/data"]
+
+EXPOSE 8080
+
+ENTRYPOINT ["bili-torrent"]

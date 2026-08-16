@@ -1,0 +1,14 @@
+.git
+.gotool
+bili-torrent.exe
+bili-torrent
+testdata
+data
+torrents
+downloads
+*.torrent
+Dockerfile
+.dockerignore
+README.md
+compose.example.yaml
+config.example.yaml

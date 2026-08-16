@@ -1,0 +1,45 @@
+# bili-torrent 配置文件
+# 可通过环境变量 BILI_TORRENT_* 覆盖（见 README）
+
+# HTTP 监听地址
+listen: ":8080"
+
+# 数据目录：存储种子记录、索引、ffprobe 探测缓存
+data_dir: "./data"
+
+# 生成的 .torrent 文件输出目录
+torrent_dir: "./torrents"
+
+# 需要扫描的下载根目录（bili-sync 等工具下载 bilibili 视频的目录），可配置多个
+roots:
+  - "./downloads"
+
+# 制作种子时写入的 tracker 地址，可配置多个
+trackers:
+  - "http://tracker.example.com:6969/announce"
+
+# 种子是否私有（写入 info.private）
+private: true
+
+# 种子备注
+comment: "bili-torrent"
+
+# piece length 指数（2^n 字节），0 表示自动计算
+piece_length: 0
+
+# 制作种子时排除的文件 glob（匹配文件名或种子内相对路径）
+exclude:
+  # - "*.part"
+
+# hdrprobe 可执行文件路径，用于从码流快速检测杜比视界/HDR 等视频类型。
+# 默认 "hdrprobe"（在 PATH 中查找）；留空禁用 hdrprobe 检测。
+hdrprobe_path: "hdrprobe"
+
+# 是否使用 ffprobe 补充探测音频类型（杜比全景声/FLAC/DTS 等，需安装 ffmpeg）
+probe_videos: false
+
+# 自动扫描间隔（秒），0 表示仅在启动和手动触发时扫描
+scan_interval: 0
+
+# 可选 API 鉴权 token（请求头 Authorization: Bearer <token>），留空不鉴权
+auth_token: ""

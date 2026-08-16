@@ -1,0 +1,24 @@
+services:
+  bili-torrent:
+    build: .
+    container_name: bili-torrent
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - TZ=Asia/Shanghai
+      # 配置文件位于挂载目录 /data/config/config.yaml；不存在时使用默认值 + 下方环境变量
+      # - BILI_TORRENT_LISTEN=:8080
+      # - BILI_TORRENT_ROOTS=/data/downloads
+      # - BILI_TORRENT_TRACKERS=http://tracker.example.com:6969/announce
+      # - BILI_TORRENT_PROBE_VIDEOS=true
+      # - BILI_TORRENT_AUTH_TOKEN=your_token
+    volumes:
+      # 只映射 data 目录，其下子目录分别存放 config/data/downloads/torrents：
+      #   ./data/config     配置文件（config.yaml）
+      #   ./data/data       持久化数据（种子记录/索引/探测缓存）
+      #   ./data/downloads  bilibili 视频下载目录
+      #   ./data/torrents   生成的 .torrent 输出
+      - ./data:/data
+    tmpfs:
+      - /tmp
