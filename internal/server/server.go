@@ -261,6 +261,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/torrents/{hash}/indexes", s.handleTorrentIndexes)
 	mux.HandleFunc("GET /api/indexes", s.handleIndexes)
 	mux.HandleFunc("GET /api/indexes/{key}", s.handleIndexByKey)
+	mux.HandleFunc("GET /api/indexes/{key}/file", s.handleIndexFile)
 	mux.HandleFunc("GET /api/tasks", s.handleTasks)
 	mux.HandleFunc("POST /api/rescan", s.handleRescan)
 	mux.HandleFunc("GET /api/scan", s.handleScanStatus)

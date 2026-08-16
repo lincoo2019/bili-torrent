@@ -229,9 +229,18 @@ func (s *Server) handleTorrentIndexes(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"indexes": indexes})
 }
 
-// handleIndexes GET /api/indexes
+// handleIndexes GET /api/indexes?bvid=... 返回全部索引，支持按 bvid 过滤（供扩展关联访问）。
 func (s *Server) handleIndexes(w http.ResponseWriter, r *http.Request) {
 	indexes := s.store.AllIndexes()
+	if bvid := strings.TrimSpace(r.URL.Query().Get("bvid")); bvid != "" {
+		filtered := make([]*store.IndexRecord, 0, len(indexes))
+		for _, idx := range indexes {
+			if strings.EqualFold(idx.BVID, bvid) {
+				filtered = append(filtered, idx)
+			}
+		}
+		indexes = filtered
+	}
 	if indexes == nil {
 		indexes = []*store.IndexRecord{}
 	}
@@ -246,6 +255,34 @@ func (s *Server) handleIndexByKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, idx)
+}
+
+// handleIndexFile GET /api/indexes/{key}/file 返回索引对应视频文件。
+// 与 handleFile 一致使用 http.ServeFile，支持 HTTP Range 断点播放，供扩展直接用作视频源。
+func (s *Server) handleIndexFile(w http.ResponseWriter, r *http.Request) {
+	idx := s.store.Index(r.PathValue("key"))
+	if idx == nil {
+		writeError(w, http.StatusNotFound, "索引不存在")
+		return
+	}
+	clean, ok := s.safePath(filepath.Join(idx.Folder, filepath.FromSlash(idx.FilePath)))
+	if !ok {
+		writeError(w, http.StatusForbidden, "路径不在扫描目录内")
+		return
+	}
+	info, err := os.Stat(clean)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "文件不存在")
+		return
+	}
+	if info.IsDir() {
+		writeError(w, http.StatusBadRequest, "不是视频文件")
+		return
+	}
+	if ct := videoContentTypes[strings.ToLower(filepath.Ext(clean))]; ct != "" {
+		w.Header().Set("Content-Type", ct)
+	}
+	http.ServeFile(w, r, clean)
 }
 
 // handleIndexJSON GET /index.json 机器可读的索引清单，供其它应用访问。

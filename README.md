@@ -122,7 +122,8 @@ go build -o bili-torrent .
 | POST | `/api/torrents` | 批量制作种子 `{"folders":[...]}`（异步返回任务） |
 | GET | `/api/torrents/{hash}/download` | 下载 `.torrent` |
 | GET | `/api/torrents/{hash}/indexes` | 种子下所有索引 |
-| GET | `/api/indexes` / `/api/indexes/{key}` | 索引列表 / 单个索引 |
+| GET | `/api/indexes` / `/api/indexes/{key}` | 索引列表（`bvid=` 过滤）/ 单个索引 |
+| GET | `/api/indexes/{key}/file` | 索引对应视频文件（Range 断点播放，供扩展直接作视频源） |
 | GET | `/index.json` | 机器可读索引清单 |
 | GET | `/api/tasks` | 任务进度 |
 | POST | `/api/rescan` | 异步启动后台扫描（立即返回，进度见 `GET /api/scan`） |
