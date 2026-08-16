@@ -40,7 +40,8 @@ func main() {
 	}
 
 	srv := server.New(cfg, st)
-	srv.StartScan() // 初始扫描在后台运行，网页可轮询 /api/scan 查看进度
+	srv.LoadLibrary() // 加载上次扫描结果，页面立即可用（无需等待扫描）
+	srv.StartScan()   // 后台增量扫描（保留探测缓存，只处理新增/变化内容）
 	srv.StartPeriodicScan()
 
 	httpServer := &http.Server{

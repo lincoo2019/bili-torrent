@@ -32,7 +32,6 @@ func TestScan(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	if len(lib.Folders) != 2 {
 		t.Fatalf("expected 2 folders, got %d", len(lib.Folders))
 	}
@@ -144,4 +143,39 @@ func equalTags(a, b []string) bool {
 		}
 	}
 	return true
+}
+
+// TestScanIncremental 验证增量扫描：文件未变化时复用上次结果（不重新构建/探测）。
+func TestScanIncremental(t *testing.T) {
+	s := NewScanner([]string{testRoot()}, false, "", noopCache{})
+	lib1, err := s.Scan()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// 无变化时再次扫描：应复用上次的 Folder（指针一致），数量与内容不变
+	lib2, err := s.ScanIncremental(lib1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(lib2.Folders) != len(lib1.Folders) {
+		t.Fatalf("folder count changed: %d -> %d", len(lib1.Folders), len(lib2.Folders))
+	}
+	if len(lib2.Videos) != len(lib1.Videos) {
+		t.Fatalf("video count changed: %d -> %d", len(lib1.Videos), len(lib2.Videos))
+	}
+	for i := range lib2.Folders {
+		if lib2.Folders[i] != lib1.Folders[i] {
+			t.Errorf("folder %q should be reused, got a new instance", lib1.Folders[i].Path)
+		}
+	}
+
+	// prev 为 nil 时退化为全量扫描
+	lib3, err := s.ScanIncremental(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(lib3.Folders) != len(lib1.Folders) {
+		t.Fatalf("full scan via incremental with nil prev: %d != %d", len(lib3.Folders), len(lib1.Folders))
+	}
 }

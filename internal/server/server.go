@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -117,6 +118,7 @@ func (s *Server) StartScan() bool {
 }
 
 // runScan 执行扫描主流程（在后台 goroutine 中运行）。
+// 有上次扫描结果时做增量扫描（保留探测缓存与已识别数据），否则全量扫描。
 func (s *Server) runScan() {
 	defer s.scanMu.Unlock()
 	scanner := library.NewScanner(s.cfg.Roots, s.cfg.ProbeVideos, s.cfg.HDRProbePath, probeCache{s.store})
@@ -132,7 +134,14 @@ func (s *Server) runScan() {
 			st.Progress = progress
 		})
 	})
-	lib, err := scanner.Scan()
+	prev, _ := s.loadLibrary()
+	var lib *library.Library
+	var err error
+	if prev != nil {
+		lib, err = scanner.ScanIncremental(prev)
+	} else {
+		lib, err = scanner.Scan()
+	}
 	now := time.Now()
 	if err != nil {
 		s.setScanStatus(func(st *ScanStatus) {
@@ -144,6 +153,9 @@ func (s *Server) runScan() {
 		log.Printf("扫描失败: %v", err)
 		return
 	}
+	if err := s.saveLibrary(lib); err != nil {
+		log.Printf("保存媒体库失败: %v", err)
+	}
 	s.mu.Lock()
 	s.lib = lib
 	s.mu.Unlock()
@@ -154,7 +166,64 @@ func (s *Server) runScan() {
 		st.Videos = len(lib.Videos)
 		st.FinishedAt = &now
 	})
-	log.Printf("扫描完成: %d 个视频文件夹, %d 个视频", len(lib.Folders), len(lib.Videos))
+	if prev != nil {
+		log.Printf("增量扫描完成: %d 个视频文件夹, %d 个视频", len(lib.Folders), len(lib.Videos))
+	} else {
+		log.Printf("全量扫描完成: %d 个视频文件夹, %d 个视频", len(lib.Folders), len(lib.Videos))
+	}
+}
+
+// libraryPath 返回媒体库持久化文件路径（位于数据目录，随容器重启保留）。
+func (s *Server) libraryPath() string {
+	return filepath.Join(s.cfg.DataDir, "library.json")
+}
+
+// LoadLibrary 加载上次扫描结果到内存（若存在），使页面无需等待扫描即可展示。
+func (s *Server) LoadLibrary() {
+	lib, err := s.loadLibrary()
+	if err != nil || len(lib.Folders) == 0 {
+		return
+	}
+	s.mu.Lock()
+	s.lib = lib
+	s.mu.Unlock()
+	log.Printf("已加载上次扫描结果: %d 个视频文件夹, %d 个视频", len(lib.Folders), len(lib.Videos))
+}
+
+// saveLibrary 将扫描结果原子写入数据目录，供增量扫描与重启复用。
+func (s *Server) saveLibrary(lib *library.Library) error {
+	if lib == nil {
+		return nil
+	}
+	data, err := json.MarshalIndent(lib.Folders, "", "  ")
+	if err != nil {
+		return err
+	}
+	tmp := s.libraryPath() + ".tmp"
+	if err := os.WriteFile(tmp, data, 0o644); err != nil {
+		return err
+	}
+	return os.Rename(tmp, s.libraryPath())
+}
+
+// loadLibrary 从数据目录加载上次扫描结果；不存在或损坏时返回 nil。
+func (s *Server) loadLibrary() (*library.Library, error) {
+	data, err := os.ReadFile(s.libraryPath())
+	if err != nil {
+		return nil, err
+	}
+	var folders []*library.Folder
+	if err := json.Unmarshal(data, &folders); err != nil {
+		return nil, err
+	}
+	lib := &library.Library{Folders: folders, ByKey: map[string]*library.Video{}}
+	for _, f := range folders {
+		for _, v := range f.Videos {
+			lib.Videos = append(lib.Videos, v)
+			lib.ByKey[v.Key] = v
+		}
+	}
+	return lib, nil
 }
 
 // StartPeriodicScan 按配置周期启动自动扫描。
@@ -195,6 +264,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/tasks", s.handleTasks)
 	mux.HandleFunc("POST /api/rescan", s.handleRescan)
 	mux.HandleFunc("GET /api/scan", s.handleScanStatus)
+	mux.HandleFunc("POST /api/library/reset", s.handleLibraryReset)
 	mux.HandleFunc("GET /api/poster", s.handlePoster)
 	mux.HandleFunc("GET /api/file", s.handleFile)
 	mux.HandleFunc("GET /api/config", s.handleConfig)

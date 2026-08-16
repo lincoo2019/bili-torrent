@@ -141,7 +141,7 @@
     const poster = v.poster_url
       ? `<img src="${esc(v.poster_url)}" loading="lazy" alt="" onerror="this.parentElement.innerHTML=placeholderHTML()"/>`
       : `<div class="placeholder">▶</div>`;
-    const posterLink = `<a class="poster-link" href="${esc(videoHref)}" target="_blank" title="打开视频">${poster}<span class="play-btn">▶</span></a>`;
+    const posterLink = `<a class="poster-link" href="${esc(videoHref)}" target="_blank" title="打开视频">${poster}</a>`;
 
     // 视频类型标签（杜比视界特殊高亮）
     const tags = (v.types || []).map((t) => {
@@ -421,6 +421,23 @@
       const roots = (state.config && state.config.roots || []).slice();
       roots.splice(Number(btn.dataset.remove), 1);
       saveRoots(roots);
+    });
+
+    // 重置媒体库：清空缓存，触发真正的全量重新扫描
+    $('#btn-reset-library').addEventListener('click', async () => {
+      if (!confirm('重置将清空媒体库与探测缓存，并全量重新扫描所有视频。确定继续？')) return;
+      try {
+        const r = await api('/api/library/reset', { method: 'POST' });
+        if (r.already_running) {
+          toast('已有扫描在运行，媒体库已清空，扫描结束后将重建');
+        } else {
+          toast('媒体库已重置，正在全量重新扫描');
+        }
+        await refreshAll();
+        pollScan();
+      } catch (err) {
+        toast('重置失败: ' + err.message, 'err');
+      }
     });
 
     // 卡片操作（事件委托）

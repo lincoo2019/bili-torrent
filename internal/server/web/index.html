@@ -103,6 +103,11 @@
       </div>
     </section>
     <section class="panel panel-gap">
+      <h2>媒体库</h2>
+      <p class="hint">扫描为增量执行：已识别的视频（含类型探测结果）会保留在数据目录，只处理新增/变化的文件。仅当数据异常或需重新探测全部视频时，才重置媒体库（清空缓存并全量重新扫描）。</p>
+      <button class="btn danger" id="btn-reset-library">重置媒体库（全量重扫）</button>
+    </section>
+    <section class="panel panel-gap">
       <h2>其它配置（只读）</h2>
       <div class="kv" id="other-config"></div>
     </section>

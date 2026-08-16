@@ -321,6 +321,23 @@ func (s *Server) handleScanStatus(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, s.ScanStatus())
 }
 
+// handleLibraryReset POST /api/library/reset 清空媒体库与探测缓存，全量重新扫描。
+// 常规扫描为增量（保留已识别数据与探测缓存）；仅此操作触发真正的全量重建。
+func (s *Server) handleLibraryReset(w http.ResponseWriter, r *http.Request) {
+	_ = os.Remove(s.libraryPath())
+	s.store.ResetProbe()
+	s.mu.Lock()
+	s.lib = nil
+	s.mu.Unlock()
+	started := s.StartScan()
+	writeJSON(w, http.StatusOK, map[string]any{
+		"ok":              true,
+		"reset":           true,
+		"scan_started":    started,
+		"already_running": !started,
+	})
+}
+
 // handlePoster GET /api/poster?path=...
 func (s *Server) handlePoster(w http.ResponseWriter, r *http.Request) {
 	p := r.URL.Query().Get("path")

@@ -122,6 +122,56 @@ func (s *Scanner) Scan() (*Library, error) {
 	units := s.buildUnits(dirs)
 	folders := s.buildFolders(dirs, units)
 
+	return s.buildLibrary(folders), nil
+}
+
+// ScanIncremental 基于上次扫描结果做增量扫描：
+//   - 文件未变化的单元直接复用上次结果（保留类型标签等探测数据，不再重新探测）；
+//   - 新增或文件有变化的单元完整构建（类型探测命中 probe 缓存时同样跳过）；
+//   - 已消失的单元从结果中移除。
+func (s *Scanner) ScanIncremental(prev *Library) (*Library, error) {
+	dirs, err := s.collectDirs()
+	if err != nil {
+		return nil, err
+	}
+	units := s.buildUnits(dirs)
+
+	prevByPath := map[string]*Folder{}
+	if prev != nil {
+		for _, f := range prev.Folders {
+			prevByPath[f.Path] = f
+		}
+	}
+
+	keys := make([]string, 0, len(units))
+	for p := range units {
+		keys = append(keys, p)
+	}
+	sort.Strings(keys)
+
+	var folders []*Folder
+	for i, p := range keys {
+		u := units[p]
+		var f *Folder
+		if prevF := prevByPath[p]; prevF != nil && !s.unitFilesChanged(u, units, prevF) {
+			f = prevF // 文件未变，复用上次结果（含探测数据）
+		} else {
+			f = s.buildFolder(u, units)
+		}
+		if s.onProgress != nil {
+			s.onProgress(i+1, len(keys), u.Name())
+		}
+		if f == nil || len(f.Videos) == 0 {
+			continue
+		}
+		folders = append(folders, f)
+	}
+	sort.Slice(folders, func(i, j int) bool { return folders[i].Path < folders[j].Path })
+	return s.buildLibrary(folders), nil
+}
+
+// buildLibrary 由文件夹列表组装 Library。
+func (s *Scanner) buildLibrary(folders []*Folder) *Library {
 	lib := &Library{Folders: folders, ByKey: map[string]*Video{}}
 	for _, f := range folders {
 		for _, v := range f.Videos {
@@ -130,7 +180,51 @@ func (s *Scanner) Scan() (*Library, error) {
 		}
 	}
 	sort.Slice(lib.Videos, func(i, j int) bool { return lib.Videos[i].Title < lib.Videos[j].Title })
-	return lib, nil
+	return lib
+}
+
+// unitFilesChanged 判断单元内的视频文件与上次结果是否一致（路径集合与文件大小）。
+// 一致返回 false（可复用上次数据）；不一致返回 true（需要重新构建）。
+func (s *Scanner) unitFilesChanged(u *unit, units map[string]*unit, prev *Folder) bool {
+	if len(prev.Videos) == 0 {
+		return true
+	}
+	sizeByFile := map[string]int64{}
+	for _, v := range prev.Videos {
+		sizeByFile[v.File] = v.Size
+	}
+	var videoFiles []string
+	_ = filepath.WalkDir(u.dir, func(path string, e fs.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if path == u.dir {
+			return nil
+		}
+		if e.IsDir() {
+			if other, ok := units[path]; ok && other != u {
+				return fs.SkipDir // 嵌套单元不并入
+			}
+			return nil
+		}
+		if isVideoExt(strings.ToLower(e.Name())) {
+			videoFiles = append(videoFiles, path)
+		}
+		return nil
+	})
+	if len(videoFiles) != len(prev.Videos) {
+		return true
+	}
+	for _, f := range videoFiles {
+		want, ok := sizeByFile[f]
+		if !ok {
+			return true
+		}
+		if info, err := os.Stat(f); err != nil || info.Size() != want {
+			return true
+		}
+	}
+	return false
 }
 
 // collectDirs 遍历所有根目录，记录每个目录直接包含的视频文件与 bilibili nfo。
