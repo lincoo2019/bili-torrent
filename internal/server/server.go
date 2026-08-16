@@ -196,6 +196,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/rescan", s.handleRescan)
 	mux.HandleFunc("GET /api/scan", s.handleScanStatus)
 	mux.HandleFunc("GET /api/poster", s.handlePoster)
+	mux.HandleFunc("GET /api/file", s.handleFile)
 	mux.HandleFunc("GET /api/config", s.handleConfig)
 	mux.HandleFunc("PUT /api/config/roots", s.handleUpdateRoots)
 	mux.HandleFunc("GET /index.json", s.handleIndexJSON)

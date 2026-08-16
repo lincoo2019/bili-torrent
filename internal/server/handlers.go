@@ -341,6 +341,47 @@ func (s *Server) handlePoster(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, clean)
 }
 
+// videoContentTypes 为常见视频扩展名提供 MIME 类型，
+// 保证浏览器直接内联播放（而非作为附件下载）。
+var videoContentTypes = map[string]string{
+	".mp4":  "video/mp4",
+	".m4v":  "video/mp4",
+	".webm": "video/webm",
+	".mkv":  "video/x-matroska",
+	".flv":  "video/x-flv",
+	".ts":   "video/mp2t",
+	".mov":  "video/quicktime",
+	".avi":  "video/x-msvideo",
+}
+
+// handleFile GET /api/file?path=... 返回扫描目录内的视频文件。
+// 使用 http.ServeFile，支持 HTTP Range 断点请求，可拖动进度条播放。
+func (s *Server) handleFile(w http.ResponseWriter, r *http.Request) {
+	p := r.URL.Query().Get("path")
+	if p == "" {
+		writeError(w, http.StatusBadRequest, "缺少 path 参数")
+		return
+	}
+	clean, ok := s.safePath(p)
+	if !ok {
+		writeError(w, http.StatusForbidden, "路径不在扫描目录内")
+		return
+	}
+	info, err := os.Stat(clean)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "文件不存在")
+		return
+	}
+	if info.IsDir() {
+		writeError(w, http.StatusBadRequest, "不是视频文件")
+		return
+	}
+	if ct := videoContentTypes[strings.ToLower(filepath.Ext(clean))]; ct != "" {
+		w.Header().Set("Content-Type", ct)
+	}
+	http.ServeFile(w, r, clean)
+}
+
 // handleConfig GET /api/config
 func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{

@@ -136,9 +136,12 @@
     card.dataset.key = v.key;
 
     const made = !!v.torrent;
+    // 点击封面在新标签页打开视频文件（/api/file 支持 Range 断点播放）
+    const videoHref = '/api/file?path=' + encodeURIComponent(v.file);
     const poster = v.poster_url
       ? `<img src="${esc(v.poster_url)}" loading="lazy" alt="" onerror="this.parentElement.innerHTML=placeholderHTML()"/>`
       : `<div class="placeholder">▶</div>`;
+    const posterLink = `<a class="poster-link" href="${esc(videoHref)}" target="_blank" title="打开视频">${poster}<span class="play-btn">▶</span></a>`;
 
     // 视频类型标签（杜比视界特殊高亮）
     const tags = (v.types || []).map((t) => {
@@ -165,7 +168,7 @@
     card.innerHTML = `
       <input type="checkbox" class="sel" data-act="select" ${state.selected.has(v.key) ? 'checked' : ''} title="选择" />
       <div class="poster">
-        ${poster}
+        ${posterLink}
         ${badge}
         <a class="bvid-badge" href="${esc(v.url)}" target="_blank" title="在 B 站打开">${esc(v.bvid)}</a>
       </div>

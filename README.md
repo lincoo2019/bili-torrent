@@ -127,6 +127,7 @@ go build -o bili-torrent .
 | POST | `/api/rescan` | 异步启动后台扫描（立即返回，进度见 `GET /api/scan`） |
 | GET | `/api/scan` | 后台扫描进度（running/progress/current_name/folders/videos） |
 | GET | `/api/poster?path=` | 海报图片（限制在扫描目录内） |
+| GET | `/api/file?path=` | 视频文件（限制在扫描目录内，支持 Range 断点播放；点击卡片封面打开） |
 | GET | `/api/config` | 公开配置信息 |
 | PUT | `/api/config/roots` | 更新扫描文件夹 `{"roots":[...]}`（持久化并后台重扫） |
 
