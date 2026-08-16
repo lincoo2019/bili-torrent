@@ -321,11 +321,11 @@ func (s *Server) handleScanStatus(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, s.ScanStatus())
 }
 
-// handleLibraryReset POST /api/library/reset 清空媒体库与探测缓存，全量重新扫描。
-// 常规扫描为增量（保留已识别数据与探测缓存）；仅此操作触发真正的全量重建。
+// handleLibraryReset POST /api/library/reset 重建媒体库识别结果，触发全量重新扫描。
+// 保留探测缓存（probe cache）与种子记录（它们本就持久化在数据目录），
+// 只丢弃 library.json 中的识别结果并全量重建，扫描时命中探测缓存即跳过重新探测。
 func (s *Server) handleLibraryReset(w http.ResponseWriter, r *http.Request) {
 	_ = os.Remove(s.libraryPath())
-	s.store.ResetProbe()
 	s.mu.Lock()
 	s.lib = nil
 	s.mu.Unlock()

@@ -1,18 +1,24 @@
 # bili-torrent 配置文件
 # 可通过环境变量 BILI_TORRENT_* 覆盖（见 README）
+#
+# 所有数据统一放在 data 目录下（与应用自动创建子文件夹的行为一致）：
+#   data/data      持久化数据：db.json（种子记录/索引/探测缓存）、library.json（媒体库）
+#   data/torrents  生成的 .torrent 文件
+#   data/downloads 需要扫描的下载根目录
+#   data/config    本配置文件
 
 # HTTP 监听地址
 listen: ":8080"
 
-# 数据目录：存储种子记录、索引、ffprobe 探测缓存
-data_dir: "./data"
+# 数据目录：存储种子记录、索引、探测缓存（probe cache）、媒体库
+data_dir: "./data/data"
 
 # 生成的 .torrent 文件输出目录
-torrent_dir: "./torrents"
+torrent_dir: "./data/torrents"
 
 # 需要扫描的下载根目录（bili-sync 等工具下载 bilibili 视频的目录），可配置多个
 roots:
-  - "./downloads"
+  - "./data/downloads"
 
 # 制作种子时写入的 tracker 地址，可配置多个
 trackers:

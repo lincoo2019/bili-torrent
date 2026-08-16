@@ -423,9 +423,9 @@
       saveRoots(roots);
     });
 
-    // 重置媒体库：清空缓存，触发真正的全量重新扫描
+    // 重置媒体库：重建识别结果，全量重新扫描（保留探测缓存与种子记录）
     $('#btn-reset-library').addEventListener('click', async () => {
-      if (!confirm('重置将清空媒体库与探测缓存，并全量重新扫描所有视频。确定继续？')) return;
+      if (!confirm('重置将重新扫描全部视频并重建媒体库（保留探测缓存与种子记录）。确定继续？')) return;
       try {
         const r = await api('/api/library/reset', { method: 'POST' });
         if (r.already_running) {

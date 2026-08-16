@@ -213,11 +213,3 @@ func (s *Store) ProbeSet(file string, tags []string) {
 	s.db.Probe[file] = tags
 	_ = s.save()
 }
-
-// ResetProbe 清空探测缓存并持久化（重置媒体库后全量重新探测时使用）。
-func (s *Store) ResetProbe() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.db.Probe = map[string][]string{}
-	_ = s.save()
-}
