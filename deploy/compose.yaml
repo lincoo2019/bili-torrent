@@ -1,9 +1,9 @@
 # bili-torrent 服务器部署配置（使用预构建镜像 bili-torrent:latest）
 # 只挂载一个 data 目录，其下子目录分别存放 config/data/downloads/torrents：
-#   ./data/config    配置文件 config.yaml
-#   ./data/data      持久化数据（种子记录/索引/探测缓存）
-#   ./data/downloads bilibili 视频下载目录
-#   ./data/torrents  生成的 .torrent 输出
+#   data/config    配置文件 config.yaml 与 TLS 证书
+#   data/data      持久化数据（种子记录/索引/探测缓存）
+#   data/downloads bilibili 视频下载目录
+#   data/torrents  生成的 .torrent 输出
 services:
   bili-torrent:
     image: bili-torrent:latest
@@ -15,6 +15,6 @@ services:
       - TZ=Asia/Shanghai
       - BILI_TORRENT_CONFIG=/data/config/config.yaml
     volumes:
-      - ./data:/data
+      - /vol3/1000/docker/bili-torrent/data:/data
     tmpfs:
       - /tmp

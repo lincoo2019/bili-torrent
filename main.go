@@ -50,7 +50,16 @@ func main() {
 		ReadHeaderTimeout: 30 * time.Second,
 	}
 	go func() {
-		log.Printf("bili-torrent %s 已启动，网页: http://localhost%s", version, displayAddr(cfg.Listen))
+		scheme := "http"
+		if cfg.TLSCert != "" && cfg.TLSKey != "" {
+			scheme = "https"
+			log.Printf("bili-torrent %s 已启动（HTTPS），网页: %s://localhost%s", version, scheme, displayAddr(cfg.Listen))
+			if err := httpServer.ListenAndServeTLS(cfg.TLSCert, cfg.TLSKey); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				log.Fatalf("HTTPS 服务错误: %v", err)
+			}
+			return
+		}
+		log.Printf("bili-torrent %s 已启动，网页: %s://localhost%s", version, scheme, displayAddr(cfg.Listen))
 		if err := httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Fatalf("HTTP 服务错误: %v", err)
 		}

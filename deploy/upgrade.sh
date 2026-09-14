@@ -10,34 +10,36 @@ S cp /tmp/Dockerfile.runtime /opt/bili-torrent/runtime/Dockerfile
 S cp /tmp/compose.yaml /opt/bili-torrent/compose.yaml
 S chmod +x /opt/bili-torrent/runtime/bili-torrent-linux-amd64 /opt/bili-torrent/runtime/hdrprobe-1.0.0-linux-x64-static
 
-echo '=== 2/6 迁移为 data 子目录结构 ==='
+echo '=== 2/6 数据目录迁移（旧 /opt/bili-torrent/data → 新位置）==='
 S bash -c '
   set -e
-  D=/opt/bili-torrent/data
+  D=/vol3/1000/docker/bili-torrent/data
   mkdir -p "$D" "$D/data"
-  # 首次迁移标记：旧的顶层 config/downloads/torrents 存在才做路径重写（data 总是存在，不参与判断）
-  FIRST=0
-  for d in config downloads torrents; do
-    [ -e "/opt/bili-torrent/$d" ] && FIRST=1
-  done
-  # 旧的 config/downloads/torrents → data/{config,downloads,torrents}
-  for d in config downloads torrents; do
-    if [ -e "/opt/bili-torrent/$d" ] && [ ! -e "$D/$d" ]; then
-      mv "/opt/bili-torrent/$d" "$D/$d"
-    fi
-  done
-  # 顶层 data 中的旧内容（db.json 等）并入 $D/data（排除已建立的子目录）
-  for f in "$D"/*; do
-    b=$(basename "$f")
-    case "$b" in config|data|downloads|torrents) continue;; esac
-    mv "$f" "$D/data/"
-  done
-  # db.json 中的旧绝对路径 /downloads、/torrents → /data/downloads、/data/torrents（防重复替换）
-  if [ "$FIRST" = 1 ] && [ -f "$D/data/db.json" ]; then
-    sed -i "s|/downloads/|@@DLOAD@@/|g; s|/torrents/|@@TORR@@/|g; s|@@DLOAD@@/|/data/downloads/|g; s|@@TORR@@/|/data/torrents/|g" "$D/data/db.json"
+  # 将旧部署的数据目录（config/data/downloads/torrents）合并到新位置；已存在则不覆盖
+  if [ -d /opt/bili-torrent/data ]; then
+    for d in config data downloads torrents; do
+      if [ -e "/opt/bili-torrent/data/$d" ]; then
+        if [ -e "$D/$d" ]; then
+          cp -rn "/opt/bili-torrent/data/$d/." "$D/$d/" 2>/dev/null || true
+        else
+          mv "/opt/bili-torrent/data/$d" "$D/$d"
+        fi
+      fi
+    done
   fi
 '
-S cp /tmp/config.yaml /opt/bili-torrent/data/config/config.yaml
+S cp /tmp/config.yaml /vol3/1000/docker/bili-torrent/data/config/config.yaml
+
+echo '=== 2b/6 TLS 证书（如提供）==='
+if [ -f /tmp/fullchain.crt ] && [ -f /tmp/fn.suay.cn.key ]; then
+  S cp /tmp/fullchain.crt /vol3/1000/docker/bili-torrent/data/config/fullchain.crt
+  S cp /tmp/fn.suay.cn.key /vol3/1000/docker/bili-torrent/data/config/fn.suay.cn.key
+  S chmod 644 /vol3/1000/docker/bili-torrent/data/config/fullchain.crt
+  S chmod 600 /vol3/1000/docker/bili-torrent/data/config/fn.suay.cn.key
+  echo 'TLS 证书已更新'
+else
+  echo '未提供证书，跳过'
+fi
 
 echo '=== 3/6 重建镜像 ==='
 S docker build -t bili-torrent:latest /opt/bili-torrent/runtime
@@ -49,11 +51,15 @@ S docker compose up -d --force-recreate
 
 echo '=== 5/6 验证 ==='
 sleep 3
-curl -s -o /dev/null -w '首页 HTTP %{http_code}\n' http://localhost:8080/
+# 服务可能为 HTTPS（配置 tls_cert/tls_key）或纯 HTTP，两种都尝试
+curl -sk -o /dev/null -w '首页(HTTPS) HTTP %{http_code}\n' https://localhost:8080/ 2>/dev/null \
+  || curl -s -o /dev/null -w '首页(HTTP) HTTP %{http_code}\n' http://localhost:8080/
 S docker ps --filter name=bili-torrent --format '{{.Names}} | {{.Status}}'
 S docker exec bili-torrent sh -c 'hdrprobe --version || echo hdrprobe-missing'
 S docker logs --tail 5 bili-torrent 2>&1
 
 echo '=== 6/6 配置确认 ==='
-curl -s http://localhost:8080/api/config
+curl -sk -o /dev/null https://localhost:8080/api/config 2>/dev/null \
+  && curl -sk https://localhost:8080/api/config \
+  || curl -s http://localhost:8080/api/config
 echo

@@ -49,3 +49,8 @@ scan_interval: 0
 
 # 可选 API 鉴权 token（请求头 Authorization: Bearer <token>），留空不鉴权
 auth_token: ""
+
+# 可选 HTTPS：证书与私钥路径（PEM）。两者同时配置才启用 HTTPS，留空则纯 HTTP。
+# 证书建议放入 data/config/ 下以便随数据目录持久化
+# tls_cert: "./data/config/fullchain.crt"
+# tls_key: "./data/config/fn.suay.cn.key"

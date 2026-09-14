@@ -69,6 +69,7 @@ go build -o bili-torrent .
 | `probe_videos` | 用 ffprobe 补充音频类型探测（需安装 ffmpeg） | `BILI_TORRENT_PROBE_VIDEOS` |
 | `scan_interval` | 自动扫描间隔（秒），0=仅手动 | `BILI_TORRENT_SCAN_INTERVAL` |
 | `auth_token` | API 鉴权 token（Bearer），留空不鉴权 | `BILI_TORRENT_AUTH_TOKEN` |
+| `tls_cert` / `tls_key` | HTTPS 证书/私钥路径（PEM，同时配置才启用；留空纯 HTTP） | `BILI_TORRENT_TLS_CERT` / `BILI_TORRENT_TLS_KEY` |
 
 ## 目录识别规则
 

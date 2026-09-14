@@ -40,6 +40,10 @@ type Config struct {
 	ScanInterval int `yaml:"scan_interval"`
 	// AuthToken 是可选的 API 鉴权 token（Bearer），留空则不鉴权。
 	AuthToken string `yaml:"auth_token"`
+	// TLSCert 是 HTTPS 证书文件路径（PEM，通常为 fullchain），留空则不启用 HTTPS。
+	TLSCert string `yaml:"tls_cert"`
+	// TLSKey 是 HTTPS 私钥文件路径（PEM）。
+	TLSKey string `yaml:"tls_key"`
 
 	// SourcePath 记录配置文件实际路径（内部使用）。
 	SourcePath string `yaml:"-"`
@@ -179,6 +183,12 @@ func applyEnv(cfg *Config) {
 	if v := os.Getenv("BILI_TORRENT_AUTH_TOKEN"); v != "" {
 		cfg.AuthToken = v
 	}
+	if v := os.Getenv("BILI_TORRENT_TLS_CERT"); v != "" {
+		cfg.TLSCert = v
+	}
+	if v := os.Getenv("BILI_TORRENT_TLS_KEY"); v != "" {
+		cfg.TLSKey = v
+	}
 	if v := os.Getenv("BILI_TORRENT_SCAN_INTERVAL"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil {
 			cfg.ScanInterval = n
@@ -250,6 +260,9 @@ func (c *Config) Validate() error {
 	}
 	if c.ScanInterval < 0 {
 		c.ScanInterval = 0
+	}
+	if (c.TLSCert == "") != (c.TLSKey == "") {
+		return fmt.Errorf("tls_cert 与 tls_key 必须同时配置（或同时留空）")
 	}
 	return nil
 }
